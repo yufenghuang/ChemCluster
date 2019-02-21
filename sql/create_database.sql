@@ -8,11 +8,13 @@ USE testing;
 
 CREATE TABLE IF NOT EXISTS INCAR (
     ID int PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    Description longtext,
     Text longtext
 );
 
 CREATE TABLE IF NOT EXISTS KPOINTS (
     ID int PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    Description longtext,
     Text longtext
 );
 
