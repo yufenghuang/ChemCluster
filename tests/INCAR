@@ -1,0 +1,45 @@
+System=Au-Surface
+
+NPAR=4
+
+##################################
+#        Start Parameter         #
+##################################
+ISTART=0
+ICHARG=2
+INIWAV=1
+
+#################################
+#        DFT Parameters         #
+#################################
+ENCUT=400
+GGA=PE
+VOSKOWN=1
+IVDW=11
+
+##################################
+#       Electronic Relaxation    #
+##################################
+PREC=Accurate
+NELM=200
+EDIFF=1.0E-05
+ISMEAR=1
+SIGMA=0.2
+ISYM=2
+LREAL=Auto
+IALGO=48
+
+##################################
+#        Ionic Relaxation        #
+##################################
+EDIFFG=-1E-2
+NSW=300
+IBRION=1
+ISIF=2
+
+###################################
+#           Output Control        #
+###################################
+LWAVE=.FALSE.
+LCHARG=.FALSE.
+NWRITE=2
