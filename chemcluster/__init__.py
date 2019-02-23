@@ -3,3 +3,4 @@ ChemCluster is a data management system to perform extraction, transformation an
 '''
 
 from .cc import CC
+from .np import Nanoparticle

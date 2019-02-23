@@ -1,4 +1,5 @@
 from .sql import SQLHandler
+from .np import Nanoparticle
 
 class CC:
     '''
@@ -6,6 +7,7 @@ class CC:
     '''
 
     sql_h = SQLHandler()
+    nanoparticle = Nanoparticle()
 
     def __init__(self, config_file=''):
         if config_file:
@@ -44,15 +46,31 @@ class CC:
     # Nanoparticles database
     #######################################################
 
-    def add_np(self, xyzFile, description, remove=None):
-        pass
+    def load_np(self, xyzfile):
+        self.nanoparticle = Nanoparticle(xyzfile)
 
-    def show_np(self):
-        # show the saved nanoparticles in the database
-        pass
+    def add_np(self, description, xyzfile=None, element=None, Rcut=8):
+        if xyzfile is not None: self.nanoparticle.load_xyz(xyzfile)
+        assert self.nanoparticle.natoms, "no nanoparticle loaded!"
+        clusters = self.nanoparticle.get_clusters(element, Rcut=Rcut)
+        self.sql_h.insert("INSERT INTO Nanoparticles VALUES (%s, %s, %s)", (None, description, self.nanoparticle.to_xyz()))
 
-    def print_np(self, index):
-        pass
+    def show_np(self, id=None):
+        if id is not None:
+            query = "SELECT id, Description, Text FROM INCAR WHERE id="+str(id)
+            rows = self.sql_h.query(query)
+            for row in rows:
+                print("INCAR ID: {}; Description: {}".format(row[0], row[1]))
+                print(row[2])
+        else:
+            query = "SELECT id, Description FROM INCAR"
+            rows = self.sql_h.query(query)
+            for row in rows:
+                print("INCAR ID: {}; Description: {}".format(row[0], row[1]))
+
+    def get_np(self, id):
+        query = "SELECT Coordinates FROM Nanoparticle WHERE id="+str(id)
+        return self.sql_h.query(query)[0][0]
 
     #######################################################
     # INCAR database

@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 
 class Nanoparticle:
 
@@ -12,12 +11,24 @@ class Nanoparticle:
     typelist = []
     coordinates = np.array([])
 
+    @property
+    def natoms(self):
+        return len(self.coordinates)
+
     def __init__(self, xyz=None):
         if xyz is not None:
             self.load_xyz(xyz)
 
     def load_xyz(self, filename):
         self.elements, self.typelist, self.coordinates = self.get_xyz(filename)
+
+    def to_xyz(self):
+        assert self.natoms, "no nanoparticle loaded!"
+        xyz = str(self.natoms)
+        xyz += "\n"
+        for i in range(self.natoms):
+            xyz += ("\n" + self.elements[self.typelist[i]] + " " + " ".join(self.coordinates[i].astype(str).tolist()))
+        return xyz
 
     def get_xyz(self, filename):
         with open(filename, 'r') as file:
@@ -77,6 +88,14 @@ class Nanoparticle:
 
         return R_surfNN[idxSurf]
 
-    def get_clusters(self, surface_site=None, element=None):
-        pass
-
+    def get_clusters(self, surface_site=None, element=None, Rcut=8):
+        if surface_site is None:
+            surface_site = self.get_surface_sites(element)
+        surface_site = np.array(surface_site).reshape((-1,3))
+        for Rs in surface_site:
+            Rl = Rs - self.coordinates
+            dl = np.sqrt(np.sum(Rl**2, axis=-1))
+            dl[dl>Rcut] = 0
+            coord = Rl[dl>0]
+            coord = np.concatenate([np.zeros((1,3)), coord], axis=0)
+            yield coord
