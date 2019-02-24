@@ -20,14 +20,18 @@ CREATE TABLE IF NOT EXISTS KPOINTS (
 
 CREATE TABLE IF NOT EXISTS Nanoparticles(
     ID int PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    natoms int,
     Description varchar(255),
+    Elements varchar(255),
     Coordinates longtext
 );
 
 CREATE TABLE IF NOT EXISTS Molecules(
     ID int PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    natoms int,
     Molecule varchar(255),
     Elements varchar(255),
+    ElementList longtext,
     Coordinates longtext,
     Energy varchar(255),
     POSCAR longtext,
@@ -38,6 +42,9 @@ CREATE TABLE IF NOT EXISTS Molecules(
 CREATE TABLE IF NOT EXISTS SurfaceSites(
     ID int PRIMARY KEY NOT NULL AUTO_INCREMENT,
     NP_ID int,
+    natoms int,
+    Elements varchar(255),
+    ElementList longtext,
     Coordinates longtext
 );
 

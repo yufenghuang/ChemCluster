@@ -8,7 +8,7 @@ class Nanoparticle:
     """
 
     elements = []
-    typelist = []
+    typelist = np.array([]).astype(int)
     coordinates = np.array([])
 
     @property
@@ -95,7 +95,11 @@ class Nanoparticle:
         for Rs in surface_site:
             Rl = Rs - self.coordinates
             dl = np.sqrt(np.sum(Rl**2, axis=-1))
+            element_list = self.typelist[dl == 0].tolist()
             dl[dl>Rcut] = 0
             coord = Rl[dl>0]
             coord = np.concatenate([np.zeros((1,3)), coord], axis=0)
-            yield coord
+            element_list += self.typelist[dl>0].tolist()
+            element_list = [self.elements[i] for i in element_list]
+            assert len(coord) == len(element_list), "lengths between coord and element_list don't agree!"
+            yield coord, element_list

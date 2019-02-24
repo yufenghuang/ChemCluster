@@ -71,6 +71,18 @@ class SQLHandler:
         self.conn.commit()
         cursor.close()
 
+    def insertmany(self, sql_query, values):
+        """
+        Insert a list of values on the sql server, no results are returned
+        :param sql_query:
+        :return: None
+        """
+        assert self.conn.is_connected(), "Connection needs to be established before query"
+        cursor = self.conn.cursor()
+        cursor.executemany(sql_query, values)
+        self.conn.commit()
+        cursor.close()
+
 def read_db_config(filename):
     '''
     Read the parameters from sql_config file. The format of the config file is follows:
