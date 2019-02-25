@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS SurfaceSites(
     ID int PRIMARY KEY NOT NULL AUTO_INCREMENT,
     NP_ID int,
     natoms int,
+    Rcut double,
     Elements varchar(255),
     ElementList longtext,
     Coordinates longtext
@@ -52,6 +53,7 @@ CREATE TABLE IF NOT EXISTS Cluster(
     ID int PRIMARY KEY NOT NULL AUTO_INCREMENT,
     SurfaceID int,
     Energy double,
+    isConverged BOOL,
     POSCAR longtext,
     INCAR_ID int,
     KPOINTS_ID int
@@ -62,6 +64,7 @@ CREATE TABLE IF NOT EXISTS ClusterCO(
     SurfaceID int,
     Coordinates longtext,
     Energy double,
+    isConverged BOOL,
     POSCAR longtext,
     KPOINTS_ID int,
     INCAR_ID int

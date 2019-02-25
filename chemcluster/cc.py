@@ -1,6 +1,10 @@
 from .sql import SQLHandler
 from .np import Nanoparticle
-import numpy as np
+from .qm import QM
+
+import random
+import os
+import shutil
 
 class CC:
     '''
@@ -9,6 +13,9 @@ class CC:
 
     sql_h = SQLHandler()
     nanoparticle = Nanoparticle()
+    qm = QM()
+    kpoints_id=None
+    incar_id=None
 
     def __init__(self, config_file=''):
         if config_file:
@@ -58,9 +65,9 @@ class CC:
         self.sql_h.insert("INSERT INTO Nanoparticles VALUES (%s, %s, %s, %s, %s)",
                           (None, str(natoms), description, " ".join(self.nanoparticle.elements), self.nanoparticle.to_xyz()))
         np_ID = self.sql_h.query("SELECT ID FROM Nanoparticles ORDER BY ID DESC LIMIT 1")[0][0]
-        surface_sites = [(None, np_ID, str(len(c)), " ".join(set(e)), " ".join(e),
+        surface_sites = [(None, np_ID, str(len(c)), str(Rcut), " ".join(set(e)), " ".join(e),
                           " ".join(c.reshape(-1).astype(str).tolist())) for c, e in cluster_gen]
-        self.sql_h.insertmany("INSERT INTO SurfaceSites VALUES (%s, %s, %s, %s, %s, %s)", surface_sites)
+        self.sql_h.insertmany("INSERT INTO SurfaceSites VALUES (%s, %s, %s, %s, %s, %s, %s)", surface_sites)
 
     def show_np(self, id=None):
         if id is not None:
@@ -78,6 +85,77 @@ class CC:
     def get_np(self, id):
         query = "SELECT Coordinates FROM Nanoparticle WHERE id="+str(id)
         return self.sql_h.query(query)[0][0]
+
+    #######################################################
+    # QM tasks
+    #######################################################
+
+    def set_potcar(self, potcar):
+        with open(potcar, 'r') as f:
+            self.qm.set_potcar(potcar=f.read())
+
+    def generate_cluster(self, num, molecule=("", ), directory=None, np_id=None, shuffle=False, lattice=20,
+                         lattice_scaling=1.0, centering=False, selective_dynamics=True,
+                         potcars=None):
+
+        # making sure that incar and kpoints are chosen
+        # potcar file is checked later
+        assert self.incar_id, "Please set the incar_id according to the INCAR database"
+        assert self.kpoints_id, "Please set the kpoints_id according to the INCAR database"
+
+        # checking and creating correpsonding directories
+        if directory is not None:
+            if os.path.exists(directory):
+                if os.path.exists(directory+"_moved"):
+                    os.removedirs(directory+"_moved")
+                shutil.move(directory, directory+"_moved")
+            os.mkdir(directory)
+
+        # checking multiple adsorption states
+        if type(molecule) is str: molecule = (molecule, )
+        if len(molecule) > 1:
+            assert len(molecule) == len(potcars), "A list of POTCARs is needed for the various adsorption states"
+            poscars_temp = []
+            for p in potcars:
+                with open(p, 'r') as f:
+                    poscars_temp.append(f.read())
+            potcars = tuple(poscars_temp)
+        else:
+            potcars = (self.qm.potcar)
+
+        # joining various SQL where clauses together
+        where = []
+        for m in molecule:
+            where.append("ss.ID NOT IN (SELECT SurfaceID FROM {})".format('Cluster'+m))
+        where = " AND ".join(where)
+        if np_id is not None:
+            where += " AND ss.NP_ID=" + str(np_id)
+        if where: where = "WHERE " + where
+
+        # getting the clusters from the SQL database
+        clusters = self.sql_h.query(
+            "SELECT ss.ID, ss.NP_ID, ss.natoms, ss.Rcut, ss.Elements, ss.ElementList, ss.Coordinates FROM SurfaceSites ss " + where)
+        if shuffle: random.shuffle(clusters)
+        clusters = clusters[:num]
+
+        # craeting VASP input directory for each cluster
+        for c in clusters:
+            dictionary = {"SurfaceID": c[0], "NP_ID": c[1], "natoms": c[2], "Rcut": c[3],
+                          "Elements": c[4], "KPOINTS_ID": self.kpoints_id, "INCAR_ID": self.incar_id}
+            if directory is None:
+                dir = "Cluster" + str(c[0])
+            else:
+                dir = directory + "/Cluster" + str(c[0])
+            element_list = c[5].split(' ')
+            coordinates = c[6]
+            for i, m in enumerate(molecule):
+                poscar = self.qm.generate_poscar(coordinates=coordinates, elements=element_list,
+                                                 lattice=lattice, lattice_scaling=lattice_scaling,
+                                                 centering=centering, selective_dynamics=selective_dynamics,
+                                                 molecule=m)
+                self.qm.generate_vasp(poscar=poscar, directory=dir+m, potcar=potcars[i],
+                                      info={**dictionary, **{"molecule": m}})
+
 
     #######################################################
     # INCAR database
@@ -106,6 +184,11 @@ class CC:
         query = "SELECT Text FROM INCAR WHERE id="+str(id)
         return self.sql_h.query(query)[0][0]
 
+    def use_incar(self, id):
+        self.incar_id = id
+        incar = self.sql_h.query("SELECT Text FROM INCAR WHERE id="+str(id))[0][0]
+        self.qm.set_incar(incar=incar)
+
     #######################################################
     # KPOINTS database
     #######################################################
@@ -133,15 +216,7 @@ class CC:
         query = "SELECT Text FROM KPOINTS WHERE id="+str(id)
         return self.sql_h.query(query)[0][0]
 
-    #######################################################
-    # QM tasks
-    #######################################################
-
-    def add_qm(self, database):
-        pass
-
-    def show_qm(self, database):
-        pass
-
-    def print_qm(self, database, index):
-        pass
+    def use_kpoints(self, id):
+        self.kpoints_id = id
+        kpoints = self.sql_h.query("SELECT Text FROM KPOINTS WHERE id="+str(id))[0][0]
+        self.qm.set_kpoints(kpoints=kpoints)

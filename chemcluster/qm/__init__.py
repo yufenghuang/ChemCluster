@@ -1,6 +1,8 @@
 import os
 import shutil
 import numpy as np
+import json
+from .atomic import atomic_numbers
 
 class QM:
 
@@ -22,16 +24,18 @@ class QM:
     def set_kpoints(self, kpoints):
         self.kpoints = kpoints
 
-    def generate_vasp(self, poscar, directory, incar=None, kpoints=None, potcar=None):
+    def generate_vasp(self, poscar, directory, info, incar=None, kpoints=None, potcar=None):
         if incar is None and not self.incar: raise Exception("INCAR is not set")
         if kpoints is None and not self.kpoints: raise Exception("KPOINTS is not set")
         if potcar is None and not self.potcar: raise Exception("POTCAR is not set")
 
-        if incar is not None: self.set_incar(incar)
-        if potcar is not None: self.set_potcar(potcar)
-        if kpoints is not None: self.set_kpoints(kpoints)
+        if incar is None: incar = self.incar
+        if kpoints is None: kpoints = self.kpoints
+        if potcar is None: potcar = self.potcar
 
         if os.path.exists(directory):
+            if os.path.exists(directory+"_moved"):
+                os.removedirs(directory+"_moved")
             shutil.move(directory, directory+"_moved")
 
         os.mkdir(directory)
@@ -43,6 +47,8 @@ class QM:
             f.write(potcar)
         with open(directory+"/POSCAR", 'w') as f:
             f.write(poscar)
+        with open(directory+"/chemcluster.info", 'w') as f:
+            json.dump(info, f)
 
     def generate_poscar(self, coordinates, elements, lattice=20,
                         lattice_scaling=1.0, centering=False,
@@ -84,8 +90,9 @@ class QM:
             coordinates = np.concatenate([CO, coordinates], axis=0)
 
         # Element list (printing)
-        poscar += " ".join(set(elements)) + "\n"
-        poscar += " ".join([str(elements.count(e)) for e in set(elements)]) + "\n"
+        elements_set = sorted(set(elements), key=lambda k: atomic_numbers[k])
+        poscar += " ".join(elements_set) + "\n"
+        poscar += " ".join([str(elements.count(e)) for e in elements_set]) + "\n"
 
         # Selective dynamics
         selective = [" "] * len(elements)
@@ -99,7 +106,7 @@ class QM:
             center = lattice.sum(axis=0)/2
             coordinates += center
         poscar += "Cartesian\n"
-        for e in set(elements):
+        for e in elements_set:
             R = coordinates[np.array(elements) == e]
             s = np.array(selective)[np.array(elements) == e]
             for i in range(len(R)):
@@ -109,4 +116,3 @@ class QM:
 
     def read_results(self, directory):
         pass
-
