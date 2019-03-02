@@ -156,6 +156,12 @@ class CC:
                 self.qm.generate_vasp(poscar=poscar, directory=dir+m, potcar=potcars[i],
                                       info={**dictionary, **{"molecule": m}})
 
+    def gather_cluster(self, path_to_file):
+        pass
+
+    def gather_clusters(self, path_to_dir):
+        pass
+
 
     #######################################################
     # INCAR database
